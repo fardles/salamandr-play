@@ -19,7 +19,9 @@ Inspired by sam and norman, written using `softcut`.
 - K1+K2 starts playing the selected slice on loop. Press K1+K2 again to stop playback.
 - K3 saves the slices
 - K1+K3 starts playing the whole sample slice by slice; K1+K3 stops playback
+- The left number in the lower right corner is the selected slice; the right number is the playing slice. 
 6. Slices are saved in a folder in `dust/audio/salamandr', according to the name specified at Step 2 or the name of the loaded sample. 
+
 
 ## Installs
 
