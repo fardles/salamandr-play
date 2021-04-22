@@ -7,6 +7,7 @@
 fileselect = require('fileselect')
 textentry = require('textentry')
 tabutil = require('tabutil')
+local Audio = require "audio"
 
 -- reset variables
 
@@ -42,6 +43,8 @@ tabutil = require('tabutil')
   scale = 20
   
 function init()
+  
+  Audio.rev_off()
 
   -- softcut setup
   softcut.buffer_clear()
@@ -59,7 +62,7 @@ function init()
   softcut.loop_start(1, 0)
   softcut.loop_end(1, 350)
   softcut.loop(1, 1)
-  softcut.fade_time(1, 0.1)
+  softcut.fade_time(1, 0)
   softcut.rec(1, 0)
   softcut.rec_level(1, 1)
   softcut.pre_level(1, 1)
@@ -86,6 +89,8 @@ function init()
 
   params:add_separator()
   params:add{type = 'number', id = 'set_number_slices',name = 'Number of slices',min = 1,max = 64,default = 16, action = function(x) number_slices = x seq.length = x initialize_samples() slice_segments() end}
+  
+  params:add_control("clockdiv", "clock division", controlspec.new(0.25, 32, 'lin', 0.5, 4))
 
 redraw()
 end
@@ -98,7 +103,7 @@ function on_render(ch, start, i, s)
 end
 
 function update_content(buffer,winstart,winend,samples)
-  softcut.render_buffer(buffer, winstart, winend - winstart, 256)
+  softcut.render_buffer(buffer, winstart, winend - winstart, 128)
 end
 
 function load_file(file)
@@ -114,8 +119,8 @@ function load_file(file)
       
       -- load file in softcut
       softcut.buffer_clear_region(1,-1)
-      local ch, samples, rate = audio.file_info(file)
-      sample_len = samples / rate
+      local ch, samples = audio.file_info(file)
+      sample_len = samples / 48000
       softcut.buffer_clear(1)
       softcut.buffer_read_mono(file, 0, 0, -1, 1, 1)
       softcut.loop_start(1,0)
@@ -191,21 +196,19 @@ function write_buffer()
 end
 
 function step()
+  softcut.loop(1,0)
+  softcut.play(1,1)
+  softcut.fade_time(1, 0.1)
   while true do
-    clock.sync(1)
+    clock.sync(1/params:get("clockdiv"))
     print('Playing '..seq.pos)
-    softcut.loop(1,0)
+    softcut.position(1,samples[seq.pos].start)
     softcut.loop_start(1,samples[seq.pos].start)
     softcut.loop_end(1,samples[seq.pos].start+samples[seq.pos].length)
-    softcut.position(1,samples[seq.pos].start)
-    softcut.play(1,1)
-    seq.pos = seq.pos + 1
+    seq.pos = seq.pos+1
     if seq.pos > seq.length then
-      seq.pos = seq.start
-    elseif seq.pos < seq.start then
-      seq.pos = seq.start
-    end
-  redraw()
+      seq.pos = seq.start end
+    redraw()
   end
 end
 
@@ -218,6 +221,7 @@ function key(n,z)
     elseif alt == true then
       if playing == false then
         softcut.loop(1,1)
+        softcut.fade_time(1, 0.1)
         softcut.loop_start(1,samples[selected_slice].start)
         softcut.loop_end(1,samples[selected_slice].start+samples[selected_slice].length)
         softcut.position(1,samples[selected_slice].start)
@@ -251,6 +255,9 @@ function enc(n,d)
   if n == 1 then
     selected_slice = util.clamp(selected_slice+d,1,16)
     print(selected_slice)
+    print(samples[selected_slice].start)
+    print(samples[selected_slice].length)
+    print(samples[selected_slice].start+samples[selected_slice].length)
   elseif n == 2 then
     if alt ~= true then
       -- coarse
