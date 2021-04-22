@@ -244,6 +244,7 @@ function key(n,z)
       
       end
   end
+redraw()
 end
 
 function enc(n,d)
@@ -290,15 +291,20 @@ function redraw()
     end
     for i = 1,number_slices do
       if i == selected_slice then screen.level(15) 
-      elseif i == seq.pos and latch == 1 then screen.level(15) 
       else screen.level(2) end
-      
       screen.move(util.linlin(0,sample_len,10,120,samples[i].start), 13)
       screen.line_rel(0,40)
       screen.stroke()
       screen.move(util.linlin(0,sample_len,10,120,samples[i].start+samples[i].length),13)
       screen.line_rel(0,40)
       screen.stroke()
+      if i == seq.pos and latch == 1 then
+        screen.level(15)
+        screen.move(util.linlin(0,sample_len,10,120,samples[i].start), 60)
+        screen.text('>')
+        screen.move(util.linlin(0,sample_len,10,120,samples[i].start+samples[i].length),60)
+        screen.text_right('<')
+      end
     end
     -- for i=1,number_slices+1 do
     --   if i == selected_slice or i == selected_slice + 1 then
