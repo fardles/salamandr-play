@@ -40,7 +40,7 @@ local Audio = require "audio"
 -- WAVEFORMS
   local interval = 0
   waveform_samples = {}
-  scale = 20
+  scale = 30
   
 function init()
   
@@ -88,7 +88,7 @@ function init()
   -- number of slices for segment slicing
 
   params:add_separator()
-  params:add{type = 'number', id = 'set_number_slices',name = 'Number of slices',min = 1,max = 64,default = 16, action = function(x) number_slices = x seq.length = x initialize_samples() slice_segments() end}
+  params:add{type = 'number', id = 'set_number_slices',name = 'Number of slices',min = 1,max = 512,default = 16, action = function(x) number_slices = x seq.length = x initialize_samples() slice_segments() end}
   
   params:add_control("clockdiv", "clock division", controlspec.new(0.25, 32, 'lin', 0.5, 4))
 
@@ -220,13 +220,13 @@ function key(n,z)
       slice_segments()
     elseif alt == true then
       if playing == false then
-        softcut.loop(1,1)
-        softcut.fade_time(1, 0.1)
-        softcut.loop_start(1,samples[selected_slice].start)
-        softcut.loop_end(1,samples[selected_slice].start+samples[selected_slice].length)
-        softcut.position(1,samples[selected_slice].start)
-        softcut.play(1,1)
-        playing = true
+          softcut.loop(1,1)
+          softcut.fade_time(1, 0.1)
+          softcut.loop_start(1,samples[selected_slice].start)
+          softcut.loop_end(1,samples[selected_slice].start+samples[selected_slice].length)
+          softcut.position(1,samples[selected_slice].start)
+          softcut.play(1,1)
+          playing = true
       elseif playing == true then
         softcut.play(1,0)
         playing = false
@@ -253,7 +253,7 @@ end
 
 function enc(n,d)
   if n == 1 then
-    selected_slice = util.clamp(selected_slice+d,1,16)
+    selected_slice = util.clamp(selected_slice+d,1,number_slices)
     print(selected_slice)
     print(samples[selected_slice].start)
     print(samples[selected_slice].length)
@@ -261,22 +261,25 @@ function enc(n,d)
   elseif n == 2 then
     if alt ~= true then
       -- coarse
-      samples[selected_slice].start = util.clamp(samples[selected_slice].start+d/1,0,sample_len)
+      samples[selected_slice].start = util.clamp(samples[selected_slice].start+d/10,0,sample_len)
     elseif alt == true then
       -- fine
-      samples[selected_slice].start = util.clamp(samples[selected_slice].start+d/10,0,sample_len)
+      samples[selected_slice].start = util.clamp(samples[selected_slice].start+d/30,0,sample_len)
     end
   elseif n == 3 then
     if alt ~= true then
       -- coarse
-      samples[selected_slice].length = util.clamp(samples[selected_slice].length+d/1,0,sample_len-samples[selected_slice].start)
+      samples[selected_slice].length = util.clamp(samples[selected_slice].length+d/10,0,sample_len-samples[selected_slice].start)
     elseif alt == true then
       -- fine
-      samples[selected_slice].length = util.clamp(samples[selected_slice].length+d/10,0,sample_len-samples[selected_slice].start)
+      samples[selected_slice].length = util.clamp(samples[selected_slice].length+d/30,0,sample_len-samples[selected_slice].start)
     end
   end
-softcut.loop_start(1,samples[selected_slice].start)
-softcut.loop_end(1,samples[selected_slice].start + samples[selected_slice].length)
+if playing == true then
+      softcut.loop_start(1,samples[selected_slice].start)
+      softcut.loop_end(1,samples[selected_slice].start+samples[selected_slice].length)
+      softcut.position(1,samples[selected_slice].start)
+end
 redraw()
 end
 
