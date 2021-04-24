@@ -11,20 +11,20 @@ local Audio = require "audio"
 
 -- reset variables
 
-  file_name = ""
+	file_name = ""
   sliced_name = ""
 
 -- global variables
 
   samples = {}
-  slices = {}
-  waveform_samples = {}
-  interval = 0
-  waveform_loaded = false
-  sample_len = 1
-  position = 1
-  level = 1.0
-  number_slices = 16
+	slices = {}
+	waveform_samples = {}
+	interval = 0
+	waveform_loaded = false
+	sample_len = 1
+	position = 1
+	level = 1.0
+	number_slices = 16
   selected_slice = 1
   playing = false
   
@@ -36,61 +36,63 @@ local Audio = require "audio"
   
   latch = 0
   step_latch = {}
-  
+	
 -- WAVEFORMS
   local interval = 0
   waveform_samples = {}
   scale = 30
-  
+	
 function init()
   
   Audio.rev_off()
 
-  -- softcut setup
-  softcut.buffer_clear()
-  audio.level_cut(1)
-  audio.level_adc_cut(1)
-  audio.level_eng_cut(1)
-  softcut.level(1,1)
-  softcut.level_slew_time(1,0.1)
-  softcut.level_input_cut(1, 1, 1.0)
-  softcut.level_input_cut(2, 1, 1.0)
-  softcut.pan(1, 0.5)
-  softcut.play(1, 0)
-  softcut.rate(1, 1)
-  softcut.rate_slew_time(1,0.1)
-  softcut.loop_start(1, 0)
-  softcut.loop_end(1, 350)
-  softcut.loop(1, 1)
-  softcut.fade_time(1, 0)
-  softcut.rec(1, 0)
-  softcut.rec_level(1, 1)
-  softcut.pre_level(1, 1)
-  softcut.position(1, 0)
-  softcut.buffer(1,1)
-  softcut.enable(1, 1)
-  softcut.filter_dry(1, 1)
+	-- softcut setup
+	softcut.buffer_clear()
+	audio.level_cut(1)
+	audio.level_adc_cut(1)
+	audio.level_eng_cut(1)
+	softcut.level(1,1)
+	softcut.level_slew_time(1,0.1)
+	softcut.level_input_cut(1, 1, 1.0)
+	softcut.level_input_cut(2, 1, 1.0)
+	softcut.pan(1, 0.5)
+	softcut.play(1, 0)
+	softcut.rate(1, 1)
+	softcut.rate_slew_time(1,0.1)
+	softcut.loop_start(1, 0)
+	softcut.loop_end(1, 350)
+	softcut.loop(1, 1)
+	softcut.fade_time(1, 0)
+	softcut.rec(1, 0)
+	softcut.rec_level(1, 1)
+	softcut.pre_level(1, 1)
+	softcut.position(1, 0)
+	softcut.buffer(1,1)
+	softcut.enable(1, 1)
+	softcut.filter_dry(1, 1)
 
   softcut.phase_quant(1,0.01)
   softcut.poll_start_phase()
   softcut.event_render(on_render)
 
-  -- load a sample
+	-- load a sample
 
-  params:add_trigger('load_s', 'Load sample')
-  params:set_action('load_s', function() fileselect.enter(_path.audio,load_file) end)
+	params:add_trigger('load_s', 'Load sample')
+	params:set_action('load_s', function() fileselect.enter(_path.audio,load_file) end)
 
-  -- name of sliced sample
+	-- name of sliced sample
 
-  params:add_trigger('set_sliced_n', 'Sliced sample name')
-  params:set_action('set_sliced_n', function() textentry.enter(get_sliced_name,file_name, "") end)
+	params:add_trigger('set_sliced_n', 'Sliced sample name')
+	params:set_action('set_sliced_n', function() textentry.enter(get_sliced_name,file_name, "") end)
 
-  -- number of slices for segment slicing
+	-- number of slices for segment slicing
 
-  params:add_separator()
-  params:add{type = 'number', id = 'set_number_slices',name = 'Number of slices',min = 1,max = 512,default = 16, action = function(x) number_slices = x seq.length = x initialize_samples() slice_segments() end}
-  
-  params:add_control("clockdiv", "clock division", controlspec.new(0.25, 32, 'lin', 0.5, 4))
+	params:add_separator()
+	params:add{type = 'number', id = 'set_number_slices',name = 'Number of slices',min = 1,max = 512,default = 16, action = function(x) number_slices = x seq.length = x initialize_samples() slice_segments() end}
+	
+	params:add_control("clockdiv", "clock division", controlspec.new(0.25, 32, 'lin', 0.5, 4))
+	
+	params:add_control("fade_playback", "fade time on playback", controlspec.new(0.0,0.1,'lin',0.01,0))
 
 redraw()
 end
@@ -107,98 +109,98 @@ function update_content(buffer,winstart,winend,samples)
 end
 
 function load_file(file)
-  if file ~= 'cancel' then
-    -- get names of folder and file
-    local split_at = string.match(file, "^.*()/")
-      local folder_name = string.sub(file, 1, split_at)
-      sample_name = string.sub(file, split_at + 1)
-      print(sample_name)
-      
-      --set default name for sliced files
+	if file ~= 'cancel' then
+		-- get names of folder and file
+		local split_at = string.match(file, "^.*()/")
+  		local folder_name = string.sub(file, 1, split_at)
+  		sample_name = string.sub(file, split_at + 1)
+  		print(sample_name)
+  		
+  		--set default name for sliced files
       sliced_name = sample_name:gsub(".wav","")
       
-      -- load file in softcut
-      softcut.buffer_clear_region(1,-1)
-      local ch, samples = audio.file_info(file)
-      sample_len = samples / 48000
-      softcut.buffer_clear(1)
-      softcut.buffer_read_mono(file, 0, 0, -1, 1, 1)
-      softcut.loop_start(1,0)
-      softcut.loop_end(1,sample_len)
-      waveform_loaded = true
-      update_content(1,1,sample_len,128)
-      print('loaded')
-  end
+  		-- load file in softcut
+  		softcut.buffer_clear_region(1,-1)
+  		local ch, samples = audio.file_info(file)
+  		sample_len = samples / 48000
+  		softcut.buffer_clear(1)
+  		softcut.buffer_read_mono(file, 0, 0, -1, 1, 1)
+  		softcut.loop_start(1,0)
+  		softcut.loop_end(1,sample_len)
+  		waveform_loaded = true
+  		update_content(1,1,sample_len,128)
+  		print('loaded')
+	end
 initialize_samples()
 slice_segments()
 redraw()
 end
 
 function get_sliced_name(name)
-  if name ~= nil then
-    sliced_name = name
-    print(sliced_name)
-    initialize_samples()
-    slice_segments()
-  end
+	if name ~= nil then
+		sliced_name = name
+		print(sliced_name)
+		initialize_samples()
+		slice_segments()
+	end
 end
 
 function initialize_samples()
-  for i=1,number_slices do
-    samples[i]={}
-    samples[i].start=0
-    samples[i].length=0
-    local slice_number = i
-    if string.len(slice_number) == 1 then slice_number = '0'..i end
-    samples[i].name=sliced_name..slice_number
-  end
+	for i=1,number_slices do
+		samples[i]={}
+		samples[i].start=0
+		samples[i].length=0
+		local slice_number = i
+		if string.len(slice_number) == 1 then slice_number = '0'..i end
+		samples[i].name=sliced_name..slice_number
+	end
 redraw()
 end
 
 function slice_segments()
   print(sample_len)
-  length_per_segment = sample_len / number_slices
-  for i=1,number_slices do
-    samples[i].start= 0 + (length_per_segment * (i-1))
-    samples[i].length = length_per_segment
-    print(samples[i].start)
-    print(samples[i].length)
-  end
+	length_per_segment = sample_len / number_slices
+	for i=1,number_slices do
+		samples[i].start= 0 + (length_per_segment * (i-1))
+		samples[i].length = length_per_segment
+	  print(samples[i].start)
+	  print(samples[i].length)
+	end
 redraw()
 end
 
 function write_buffer()
 
-  sliced_folder_path = _path.audio..'salamandr/'..sliced_name
+	sliced_folder_path = _path.audio..'salamandr/'..sliced_name
 
-  -- Sanitise folder and file names
+	-- Sanitise folder and file names
   
-    local sliced_folder_path_s = sliced_folder_path:gsub(" ","\\ ")
+  	local sliced_folder_path_s = sliced_folder_path:gsub(" ","\\ ")
 
-    -- create folder for sliced sample files
+  	-- create folder for sliced sample files
 
-  local cmd_create_folder = 'mkdir -p '..sliced_folder_path
-  print(cmd_create_folder)
-  os.execute(cmd_create_folder)
+	local cmd_create_folder = 'mkdir -p '..sliced_folder_path
+	print(cmd_create_folder)
+	os.execute(cmd_create_folder)
 
-  -- save buffer as mono file
+	-- save buffer as mono file
 
-  for i=1,number_slices do
-    local sliced_file_path = sliced_folder_path..'/'..samples[i].name..'.wav'
-    local loop_start = samples[i].start
-    print(loop_start)
-    local loop_length = samples[i].length
-    print(loop_length)
+	for i=1,number_slices do
+		local sliced_file_path = sliced_folder_path..'/'..samples[i].name..'.wav'
+		local loop_start = samples[i].start
+		print(loop_start)
+		local loop_length = samples[i].length
+		print(loop_length)
 
-    softcut.buffer_write_mono(sliced_file_path, loop_start, loop_length+0.12, 1)
-    print('Slice '..i..' saved as '..sliced_file_path)
-  end
+		softcut.buffer_write_mono(sliced_file_path, loop_start, loop_length+0.12, 1)
+		print('Slice '..i..' saved as '..sliced_file_path)
+	end
 end
 
 function step()
   softcut.loop(1,0)
   softcut.play(1,1)
-  softcut.fade_time(1, 0.1)
+  softcut.fade_time(1, params:get('fade_playback'))
   while true do
     clock.sync(1/params:get("clockdiv"))
     print('Playing '..seq.pos)
@@ -284,7 +286,7 @@ redraw()
 end
 
 function redraw()
-  screen.clear()
+	screen.clear()
   if not waveform_loaded then
     screen.level(15)
     screen.move(62,50)
